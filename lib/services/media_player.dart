@@ -268,8 +268,10 @@ class MediaPlayer extends ChangeNotifier {
 
   void _listenToShuffle() {
     _player.shuffleModeEnabledStream.listen((data) {
-      _shuffleModeEnabled = data;
-      notifyListeners();
+      if (_shuffleModeEnabled != data) {
+        _shuffleModeEnabled = data;
+        notifyListeners();
+      }
     });
   }
 
@@ -308,6 +310,19 @@ class MediaPlayer extends ChangeNotifier {
   Future<void> skipSilence(bool value) async {
     await _player.setSkipSilenceEnabled(value);
     GetIt.I<SettingsManager>().skipSilence = value;
+  }
+
+  Future<void> setShuffleModeEnabled(bool value) async {
+    _shuffleModeEnabled = value;
+    notifyListeners();
+    try {
+      if (value) {
+        await _player.shuffle();
+      }
+      await _player.setShuffleModeEnabled(value);
+    } catch (e) {
+      print("Error setting shuffle mode: $e");
+    }
   }
 
   Future<AudioSource> _getAudioSource(Map<String, dynamic> song) async {
