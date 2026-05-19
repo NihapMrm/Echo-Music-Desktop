@@ -20,6 +20,7 @@ class MediaPlayer extends ChangeNotifier {
   AndroidEqualizerParameters? _equalizerParams;
 
   List<IndexedAudioSource> _songList = [];
+  List<Map<String, dynamic>> _originalPlaylist = [];
   final ValueNotifier<MediaItem?> _currentSongNotifier = ValueNotifier(null);
   final ValueNotifier<int?> _currentIndex = ValueNotifier(null);
   final ValueNotifier<ButtonState> _buttonState =
@@ -267,12 +268,14 @@ class MediaPlayer extends ChangeNotifier {
   }
 
   void _listenToShuffle() {
-    _player.shuffleModeEnabledStream.listen((data) {
-      if (_shuffleModeEnabled != data) {
-        _shuffleModeEnabled = data;
-        notifyListeners();
-      }
-    });
+    if (Platform.isAndroid || Platform.isIOS) {
+      _player.shuffleModeEnabledStream.listen((data) {
+        if (_shuffleModeEnabled != data) {
+          _shuffleModeEnabled = data;
+          notifyListeners();
+        }
+      });
+    }
   }
 
   void _listenToChangesInSong() {
@@ -316,10 +319,18 @@ class MediaPlayer extends ChangeNotifier {
     _shuffleModeEnabled = value;
     notifyListeners();
     try {
-      if (value) {
-        await _player.shuffle();
+      if (Platform.isAndroid || Platform.isIOS) {
+        if (value) {
+          await _player.shuffle();
+        }
+        await _player.setShuffleModeEnabled(value);
+      } else {
+        if (value) {
+          await _shuffleRemainingQueue();
+        } else {
+          await _restoreOriginalQueueOrder();
+        }
       }
-      await _player.setShuffleModeEnabled(value);
     } catch (e) {
       print("Error setting shuffle mode: $e");
     }
@@ -365,6 +376,8 @@ class MediaPlayer extends ChangeNotifier {
     // Generate a new request ID
     final int requestId = DateTime.now().millisecondsSinceEpoch;
     _lastPlayRequestId = requestId;
+
+    _originalPlaylist = [song];
 
     // OPTIMISTIC UPDATE: Show miniplayer immediately with loading state
     MediaItem tempTag = MediaItem(
@@ -412,8 +425,18 @@ class MediaPlayer extends ChangeNotifier {
   }
 
   Future<void> playNext(Map<String, dynamic> mediaItem) async {
+    final currentSong = _currentSongNotifier.value;
+    int insertIndexOrig = _originalPlaylist.length;
+    if (currentSong != null) {
+      final origIdx = _originalPlaylist.indexWhere((song) => song['videoId'] == currentSong.id);
+      if (origIdx != -1) {
+        insertIndexOrig = origIdx + 1;
+      }
+    }
+
     // Case 1: A single video/song
     if (mediaItem['videoId'] != null) {
+      _originalPlaylist.insert(insertIndexOrig, mediaItem);
       final audioSource = await _getAudioSource(mediaItem);
 
       // Determine insertion position
@@ -432,6 +455,8 @@ class MediaPlayer extends ChangeNotifier {
       // Case 2: Custom or Downloaded Playlist
     } else if (mediaItem['songs'] != null) {
       List songs = mediaItem['songs'];
+      final songMaps = songs.map((s) => Map<String, dynamic>.from(s)).toList();
+      _originalPlaylist.insertAll(insertIndexOrig, songMaps);
       await _addSongListToQueue(songs, isNext: true);
 
       // Case 3: Online Playlist
@@ -440,6 +465,8 @@ class MediaPlayer extends ChangeNotifier {
           ? await GetIt.I<YTMusic>()
               .getNextSongList(playlistId: mediaItem['playlistId'])
           : await GetIt.I<YTMusic>().getPlaylistSongs(mediaItem['playlistId']);
+      final songMaps = songs.map((s) => Map<String, dynamic>.from(s)).toList();
+      _originalPlaylist.insertAll(insertIndexOrig, songMaps);
       await _addSongListToQueue(songs, isNext: true);
     }
   }
@@ -448,6 +475,7 @@ class MediaPlayer extends ChangeNotifier {
     if (songs.isEmpty) return;
 
     autoFetching = true;
+    _originalPlaylist = songs.map((s) => Map<String, dynamic>.from(s)).toList();
 
     _buttonState.value = ButtonState.loading;
     notifyListeners();
@@ -485,14 +513,18 @@ class MediaPlayer extends ChangeNotifier {
   Future<void> _addRemainingToPlaylist(List songs, int playedIndex) async {
     try {
       int added = 0;
+      final remaining = <Map<String, dynamic>>[];
+      for (int i = playedIndex + 1; i < songs.length; i++) {
+        remaining.add(Map<String, dynamic>.from(songs[i]));
+      }
 
-      // Add songs after the played index (next songs first)
-      for (int i = playedIndex + 1;
-          i < songs.length;
-          i++) {
+      if (_shuffleModeEnabled) {
+        remaining.shuffle();
+      }
+
+      for (var song in remaining) {
         try {
-          final source =
-              await _getAudioSource(Map<String, dynamic>.from(songs[i]));
+          final source = await _getAudioSource(song);
           await _player.addAudioSource(source);
           added++;
         } catch (e) {
@@ -507,11 +539,14 @@ class MediaPlayer extends ChangeNotifier {
   Future<void> addToQueue(Map<String, dynamic> mediaItem) async {
     // Case 1: A single video/song
     if (mediaItem['videoId'] != null) {
+      _originalPlaylist.add(mediaItem);
       await _player.addAudioSource(await _getAudioSource(mediaItem));
 
       // Case 2: Custom or Downloaded Playlist
     } else if (mediaItem['songs'] != null) {
       List songs = mediaItem['songs'];
+      final songMaps = songs.map((s) => Map<String, dynamic>.from(s)).toList();
+      _originalPlaylist.addAll(songMaps);
       await _addSongListToQueue(songs, isNext: false);
 
       // Case 3: Online Playlist
@@ -520,12 +555,15 @@ class MediaPlayer extends ChangeNotifier {
           ? await GetIt.I<YTMusic>()
               .getNextSongList(playlistId: mediaItem['playlistId'])
           : await GetIt.I<YTMusic>().getPlaylistSongs(mediaItem['playlistId']);
+      final songMaps = songs.map((s) => Map<String, dynamic>.from(s)).toList();
+      _originalPlaylist.addAll(songMaps);
       await _addSongListToQueue(songs, isNext: false);
     }
   }
 
   Future<void> startRelated(Map<String, dynamic> song,
       {bool radio = false, bool shuffle = false, bool isArtist = false}) async {
+    _originalPlaylist = [];
     await _player.clearAudioSources();
     if (!isArtist) {
       await addToQueue(song);
@@ -536,11 +574,14 @@ class MediaPlayer extends ChangeNotifier {
         radio: radio,
         shuffle: shuffle);
     if (songs.isNotEmpty) songs.removeAt(0);
+    final songMaps = songs.map((s) => Map<String, dynamic>.from(s)).toList();
+    _originalPlaylist.addAll(songMaps);
     await _addSongListToQueue(songs, isNext: false);
     await _player.play();
   }
 
   Future<void> startPlaylistSongs(Map endpoint) async {
+    _originalPlaylist = [];
     await _player.clearAudioSources();
     List songs = await GetIt.I<YTMusic>().getNextSongList(
         playlistId: endpoint['playlistId'], params: endpoint['params']);
@@ -549,6 +590,8 @@ class MediaPlayer extends ChangeNotifier {
       // if API returned a placeholder, convert or handle accordingly
     }
 
+    final songMaps = songs.map((s) => Map<String, dynamic>.from(s)).toList();
+    _originalPlaylist.addAll(songMaps);
     await _addSongListToQueue(songs);
     await _player.play();
   }
@@ -565,10 +608,14 @@ class MediaPlayer extends ChangeNotifier {
   Future<void> _addSongListToQueue(List songs, {bool isNext = false}) async {
     if (songs.isEmpty) return;
 
+    final songMaps = songs.map((s) => Map<String, dynamic>.from(s)).toList();
+    if (_shuffleModeEnabled) {
+      songMaps.shuffle();
+    }
+
     // Convert your song objects into AudioSources
-    final newSources = await Future.wait(songs.map((song) async {
-      final mapSong = Map<String, dynamic>.from(song);
-      return await _getAudioSource(mapSong);
+    final newSources = await Future.wait(songMaps.map((song) async {
+      return await _getAudioSource(song);
     }));
 
     // Current queue length
@@ -595,6 +642,8 @@ class MediaPlayer extends ChangeNotifier {
         List nextSongs = await GetIt.I<YTMusic>()
             .getNextSongList(videoId: player.sequence[index].tag.id);
         if (nextSongs.isNotEmpty) nextSongs.removeAt(0);
+        final songMaps = nextSongs.map((s) => Map<String, dynamic>.from(s)).toList();
+        _originalPlaylist.addAll(songMaps);
         await _addSongListToQueue(nextSongs);
         autoFetching = false;
       }
@@ -619,6 +668,44 @@ class MediaPlayer extends ChangeNotifier {
     _timerDuration.value = null;
     _timer?.cancel();
     notifyListeners();
+  }
+
+  Future<void> _shuffleRemainingQueue() async {
+    final currentIndex = _player.currentIndex;
+    if (currentIndex == null) return;
+    final totalSources = _player.sequence?.length ?? 0;
+    if (currentIndex + 1 >= totalSources) return;
+
+    final List<AudioSource> remainingSources = [];
+    for (int i = currentIndex + 1; i < totalSources; i++) {
+      remainingSources.add(_player.audioSources[i]);
+    }
+
+    await _player.removeAudioSourceRange(currentIndex + 1, totalSources);
+    remainingSources.shuffle();
+    await _player.addAudioSources(remainingSources);
+  }
+
+  Future<void> _restoreOriginalQueueOrder() async {
+    final currentSong = _currentSongNotifier.value;
+    if (currentSong == null) return;
+
+    final origIndex = _originalPlaylist.indexWhere((song) => song['videoId'] == currentSong.id);
+    if (origIndex == -1) return;
+
+    final remainingSongs = _originalPlaylist.sublist(origIndex + 1);
+
+    final currentIndex = _player.currentIndex ?? 0;
+    final totalSources = _player.sequence?.length ?? 0;
+
+    if (currentIndex + 1 < totalSources) {
+      await _player.removeAudioSourceRange(currentIndex + 1, totalSources);
+    }
+
+    if (remainingSongs.isNotEmpty) {
+      final newSources = await Future.wait(remainingSongs.map((song) => _getAudioSource(song)));
+      await _player.addAudioSources(newSources);
+    }
   }
 }
 
