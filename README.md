@@ -9,7 +9,7 @@
   <br/>
 
   <a href="https://github.com/EchoMusicApp/Echo-Music-Desktop/releases/download/v1.0/EchoMusic.exe">
-    <img src="assets/Windows-button.png" alt="Download for Windows" width="170"/>
+    <img src="assets/windows-button.png" alt="Download for Windows" width="170"/>
   </a>
   &nbsp;
   <a href="https://github.com/EchoMusicApp/Echo-Music-Desktop/releases/download/v1.0/EchoMusic.dmg">
@@ -17,7 +17,7 @@
   </a>
   &nbsp;
   <a href="https://github.com/EchoMusicApp/Echo-Music-Desktop#linux">
-    <img src="assets/mac-button.png" alt="Download for Linux" width="170"/>
+    <img src="assets/linux-button.png" alt="Download for Linux" width="170"/>
   </a>
 </div>
 
