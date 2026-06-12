@@ -8,13 +8,9 @@
 
   <br/>
 
-  <a href="https://github.com/EchoMusicApp/Echo-Music-Desktop/releases/download/v1.0/EchoMusic.exe">
-    <img src="assets/Windows-button.png" alt="Download for Windows" width="170"/>
-  </a>
-  &nbsp;
-  <a href="https://github.com/EchoMusicApp/Echo-Music-Desktop/releases/download/v1.0/EchoMusic.dmg">
-    <img src="assets/mac-button.png" alt="Download for Mac" width="170"/>
-  </a>
+  <a href="https://github.com/EchoMusicApp/Echo-Music-Desktop/releases/download/v1.0/EchoMusic.exe" style="text-decoration: none;"><img src="assets/windows-button.png" alt="Download for Windows" width="170"/></a>&nbsp;
+  <a href="https://github.com/EchoMusicApp/Echo-Music-Desktop/releases/download/v1.0/EchoMusic.dmg" style="text-decoration: none;"><img src="assets/mac-button.png" alt="Download for Mac" width="170"/></a>&nbsp;
+  <a href="https://github.com/EchoMusicApp/Echo-Music-Desktop#linux" style="text-decoration: none;"><img src="assets/linux-button.png" alt="Download for Linux" width="170"/></a>
 </div>
 
 ---
@@ -49,6 +45,7 @@ Echo Music Desktop brings the premium listening experience to your computer. Bui
 ---
 
 ## Installation
+**Note** (All Platforms): Light Mode currently has layout rendering bugs. It is highly recommended to switch to Dark Mode, the fix is being worked on.
 
 ### Windows
 1. Download the latest `.exe` installer from the [Releases Page](https://github.com/EchoMusicApp/Echo-Music-Desktop/releases/latest).
@@ -60,20 +57,28 @@ Echo Music Desktop brings the premium listening experience to your computer. Bui
 3. If you see a security warning, go to **System Settings → Privacy & Security** and allow the app.
 
 ### Linux
-Echo Music is available as an AppImage, DEB, and RPM package.
+Echo Music is available as an AppImage, DEB, RPM package, and via the Arch User Repository (AUR).
 
-1. Download the appropriate package from the [Releases Page](https://github.com/EchoMusicApp/Echo-Music-Desktop/releases/latest).
-2. **AppImage** — Make it executable and run it:
+1. **Arch-based Distros** - Unofficial [package](https://aur.archlinux.org/packages/echo-music-desktop-bin) maintained by [@KAUN](https://github.com/kaunkrishna):
    ```bash
-   chmod +x EchoMusic*.AppImage && ./EchoMusic*.AppImage
-   ```
-3. **DEB/RPM** — Install via your package manager:
-   ```bash
-   sudo dpkg -i package.deb
+   yay -S echo-music-desktop-bin
    # or
-   sudo rpm -i package.rpm
+   paru -S echo-music-desktop-bin
    ```
-
+2. **Other Distros** - Follow these steps to install the application:
+    - **Step 2.1:** Download the appropriate package from the [Releases Page](https://github.com/EchoMusicApp/Echo-Music-Desktop/releases/latest).
+    - **Step 2.2:** Run or install the downloaded file using the corresponding command below:
+      - **AppImage** - Make it executable and run it:
+         ```bash
+         chmod +x EchoMusic*.AppImage && ./EchoMusic*.AppImage
+         ```
+      - **DEB/RPM** - Install via your package manager:
+         ```bash
+         sudo dpkg -i package.deb
+         # or
+         sudo rpm -i package.rpm
+         ```
+         
 ---
 
 ## Build from Source
