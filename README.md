@@ -67,7 +67,7 @@ Echo Music Desktop brings the premium listening experience to your computer. Bui
 ### Linux
 Echo Music is available as an AppImage, DEB, RPM package, and via the Arch User Repository (AUR).
 
-1. **Arch-based Distros** - **Unofficial** [package](https://aur.archlinux.org/packages/echo-music-desktop-bin) maintained by [@KAUN](https://github.com/kaunkrishna):
+1. **Arch-based Distros** - Unofficial [package](https://aur.archlinux.org/packages/echo-music-desktop-bin) maintained by [@KAUN](https://github.com/kaunkrishna):
    ```bash
    yay -S echo-music-desktop-bin
    # or
