@@ -15,6 +15,10 @@
   <a href="https://github.com/EchoMusicApp/Echo-Music-Desktop/releases/download/v1.0/EchoMusic.dmg">
     <img src="assets/mac-button.png" alt="Download for Mac" width="170"/>
   </a>
+    &nbsp;
+  <a href="https://github.com/EchoMusicApp/Echo-Music-Desktop#linux">
+    <img src="assets/mac-button.png" alt="Download for Linux" width="170"/>
+  </a>
 </div>
 
 ---
