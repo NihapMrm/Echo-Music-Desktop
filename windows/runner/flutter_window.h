@@ -5,6 +5,7 @@
 #include <flutter/flutter_view_controller.h>
 #include <flutter/method_channel.h>
 #include <flutter/standard_method_codec.h>
+#include <shellapi.h>
 #include <shobjidl.h>
 
 #include <memory>
@@ -48,8 +49,19 @@ class FlutterWindow : public Win32Window {
   UINT taskbar_button_created_message_ = 0;
   bool media_playing_ = false;
 
+  // System tray icon, present for the whole app lifetime so play/pause/
+  // next/prev stay reachable even when the window is hidden (minimized to
+  // tray). Re-created on Explorer's "TaskbarCreated" broadcast.
+  NOTIFYICONDATA tray_icon_data_ = {};
+  bool tray_icon_added_ = false;
+  UINT taskbar_created_message_ = 0;
+
   void InitializeThumbarButtons();
   void SetThumbarPlaying(bool playing);
+  void InitializeTrayIcon();
+  void RemoveTrayIcon();
+  void ShowTrayMenu();
+  void SetWindowVisible(bool visible);
 };
 
 #endif  // RUNNER_FLUTTER_WINDOW_H_

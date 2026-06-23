@@ -13,10 +13,16 @@ constexpr int kHotKeyPlayPause = 1;
 constexpr int kHotKeyNextTrack = 2;
 constexpr int kHotKeyPrevTrack = 3;
 
-// Thumbnail toolbar button ids (also doubles as their WM_COMMAND id).
+// Thumbnail toolbar button ids (also doubles as their WM_COMMAND id, and
+// reused by the tray context menu's matching items).
 constexpr UINT kThumbBtnPrev = 1;
 constexpr UINT kThumbBtnPlayPause = 2;
 constexpr UINT kThumbBtnNext = 3;
+
+constexpr UINT kTrayMenuShow = 10;
+constexpr UINT kTrayMenuExit = 11;
+constexpr UINT kTrayIconId = 100;
+constexpr UINT kTrayCallbackMessage = WM_APP + 1;
 }  // namespace
 
 FlutterWindow::FlutterWindow(const flutter::DartProject& project)
@@ -67,6 +73,8 @@ bool FlutterWindow::OnCreate() {
       });
 
   taskbar_button_created_message_ = RegisterWindowMessage(L"TaskbarButtonCreated");
+  taskbar_created_message_ = RegisterWindowMessage(L"TaskbarCreated");
+  InitializeTrayIcon();
 
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
     this->Show();
@@ -84,6 +92,8 @@ void FlutterWindow::OnDestroy() {
   UnregisterHotKey(GetHandle(), kHotKeyPlayPause);
   UnregisterHotKey(GetHandle(), kHotKeyNextTrack);
   UnregisterHotKey(GetHandle(), kHotKeyPrevTrack);
+
+  RemoveTrayIcon();
 
   if (taskbar_list_) {
     taskbar_list_->Release();
@@ -150,6 +160,59 @@ void FlutterWindow::SetThumbarPlaying(bool playing) {
   taskbar_list_->ThumbBarUpdateButtons(GetHandle(), 1, &button);
 }
 
+void FlutterWindow::InitializeTrayIcon() {
+  RemoveTrayIcon();
+
+  tray_icon_data_ = {};
+  tray_icon_data_.cbSize = sizeof(NOTIFYICONDATA);
+  tray_icon_data_.hWnd = GetHandle();
+  tray_icon_data_.uID = kTrayIconId;
+  tray_icon_data_.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
+  tray_icon_data_.uCallbackMessage = kTrayCallbackMessage;
+  tray_icon_data_.hIcon =
+      LoadIcon(GetModuleHandle(nullptr), MAKEINTRESOURCE(IDI_APP_ICON));
+  wcscpy_s(tray_icon_data_.szTip, L"Echo Music");
+  tray_icon_added_ = Shell_NotifyIcon(NIM_ADD, &tray_icon_data_);
+}
+
+void FlutterWindow::RemoveTrayIcon() {
+  if (tray_icon_added_) {
+    Shell_NotifyIcon(NIM_DELETE, &tray_icon_data_);
+    tray_icon_added_ = false;
+  }
+}
+
+void FlutterWindow::SetWindowVisible(bool visible) {
+  if (visible) {
+    ShowWindow(GetHandle(), SW_SHOW);
+    ShowWindow(GetHandle(), SW_RESTORE);
+    SetForegroundWindow(GetHandle());
+  } else {
+    ShowWindow(GetHandle(), SW_HIDE);
+  }
+}
+
+void FlutterWindow::ShowTrayMenu() {
+  POINT cursor;
+  GetCursorPos(&cursor);
+
+  HMENU menu = CreatePopupMenu();
+  AppendMenu(menu, MF_STRING, kThumbBtnPrev, L"Previous");
+  AppendMenu(menu, MF_STRING, kThumbBtnPlayPause,
+             media_playing_ ? L"Pause" : L"Play");
+  AppendMenu(menu, MF_STRING, kThumbBtnNext, L"Next");
+  AppendMenu(menu, MF_SEPARATOR, 0, nullptr);
+  AppendMenu(menu, MF_STRING, kTrayMenuShow, L"Show Echo Music");
+  AppendMenu(menu, MF_STRING, kTrayMenuExit, L"Exit");
+
+  // Required for the popup to dismiss correctly when clicking elsewhere.
+  SetForegroundWindow(GetHandle());
+  TrackPopupMenu(menu, TPM_RIGHTBUTTON, cursor.x, cursor.y, 0, GetHandle(),
+                 nullptr);
+  PostMessage(GetHandle(), WM_NULL, 0, 0);
+  DestroyMenu(menu);
+}
+
 LRESULT
 FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
                               WPARAM const wparam,
@@ -169,11 +232,33 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
     InitializeThumbarButtons();
     return 0;
   }
+  if (taskbar_created_message_ != 0 && message == taskbar_created_message_) {
+    InitializeTrayIcon();
+    return 0;
+  }
+  if (message == kTrayCallbackMessage) {
+    switch (LOWORD(lparam)) {
+      case WM_LBUTTONUP:
+      case WM_LBUTTONDBLCLK:
+        SetWindowVisible(true);
+        break;
+      case WM_RBUTTONUP:
+      case WM_CONTEXTMENU:
+        ShowTrayMenu();
+        break;
+    }
+    return 0;
+  }
 
   switch (message) {
     case WM_FONTCHANGE:
       flutter_controller_->engine()->ReloadSystemFonts();
       break;
+    case WM_CLOSE:
+      // The X button hides to tray instead of quitting; only the tray
+      // menu's "Exit" (which calls DestroyWindow directly) actually quits.
+      SetWindowVisible(false);
+      return 0;
     case WM_HOTKEY:
       if (media_key_channel_) {
         switch (wparam) {
@@ -189,9 +274,15 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
         }
       }
       break;
-    case WM_COMMAND:
-      if (HIWORD(wparam) == THBN_CLICKED && media_key_channel_) {
-        switch (LOWORD(wparam)) {
+    case WM_COMMAND: {
+      const WORD notification = HIWORD(wparam);
+      const WORD id = LOWORD(wparam);
+      // THBN_CLICKED comes from the taskbar thumbnail toolbar; a zero
+      // notification code comes from the tray's popup menu. Both reuse the
+      // same three ids for play/pause/next/prev.
+      if ((notification == THBN_CLICKED || notification == 0) &&
+          media_key_channel_) {
+        switch (id) {
           case kThumbBtnPrev:
             media_key_channel_->InvokeMethod("previous", nullptr);
             break;
@@ -203,7 +294,20 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
             break;
         }
       }
+      if (notification == 0) {
+        switch (id) {
+          case kTrayMenuShow:
+            SetWindowVisible(true);
+            break;
+          case kTrayMenuExit:
+            // DestroyWindow goes straight to WM_DESTROY, bypassing the
+            // WM_CLOSE handler above that hides to tray instead of quitting.
+            DestroyWindow(hwnd);
+            break;
+        }
+      }
       break;
+    }
   }
 
   return Win32Window::MessageHandler(hwnd, message, wparam, lparam);
