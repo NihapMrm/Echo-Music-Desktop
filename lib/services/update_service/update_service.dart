@@ -11,8 +11,8 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:pub_semver/pub_semver.dart';
 
 class UpdateService {
-  static const String owner = 'iad1tya';
-  static const String repo = 'Echo_music';
+  static const String owner = 'NihapMrm';
+  static const String repo = 'Echo-Music-Desktop';
 
   /* ─────────────────────────────────────────────
    * 1️⃣ PURE UPDATE CHECK (NO UI)
@@ -24,7 +24,7 @@ class UpdateService {
 
       // Fetch the update JSON
       final Uri uri = Uri.parse(
-        'https://raw.githubusercontent.com/iad1tya/Echo-Music/main/desktop_update.json',
+        'https://raw.githubusercontent.com/$owner/$repo/main/desktop_update.json',
       );
 
       final response = await http.get(uri);
@@ -58,7 +58,7 @@ class UpdateService {
           name: 'New Update Available',
           body: 'A new version of Echo Music is available. Please update to continue.',
           publishedAt: '',
-          downloadUrl: 'https://echomusic.fun',
+          downloadUrl: 'https://github.com/$owner/$repo/releases/latest',
         );
       }
       
