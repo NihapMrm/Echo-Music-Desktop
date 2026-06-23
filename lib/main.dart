@@ -17,6 +17,7 @@ import 'generated/l10n.dart';
 import 'services/download_manager.dart';
 import 'services/file_storage.dart';
 import 'services/library.dart';
+import 'services/local_library.dart';
 import 'services/lyrics.dart';
 import 'services/media_player.dart';
 import 'services/settings_manager.dart';
@@ -109,6 +110,7 @@ void main() async {
 
   GetIt.I.registerSingleton<LibraryService>(libraryService);
   GetIt.I.registerSingleton<LyricsService>(LyricsService());
+  GetIt.I.registerSingleton<LocalLibraryService>(LocalLibraryService());
 
   runApp(
     MultiProvider(
@@ -183,4 +185,5 @@ Future<void> initialiseHive() async {
   await Hive.openBox('SONG_HISTORY');
   await Hive.openBox('FAVOURITES');
   await Hive.openBox('DOWNLOADS');
+  await Hive.openBox('LOCAL_MUSIC');
 }

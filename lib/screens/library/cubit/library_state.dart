@@ -14,12 +14,14 @@ class LibraryLoaded extends LibraryState {
   final int favouritesCount;
   final int downloadsCount;
   final int historyCount;
+  final int localMusicCount;
 
   const LibraryLoaded({
     required this.playlists,
     required this.favouritesCount,
     required this.downloadsCount,
     required this.historyCount,
+    required this.localMusicCount,
   });
 }
 

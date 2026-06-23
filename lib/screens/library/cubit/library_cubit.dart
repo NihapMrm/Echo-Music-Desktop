@@ -13,6 +13,7 @@ class LibraryCubit extends Cubit<LibraryState> {
   late final Box _favouritesBox;
   late final Box _downloadsBox;
   late final Box _historyBox;
+  late final Box _localMusicBox;
 
   late final VoidCallback _listener;
 
@@ -21,6 +22,7 @@ class LibraryCubit extends Cubit<LibraryState> {
     _favouritesBox = Hive.box('FAVOURITES');
     _downloadsBox = Hive.box('DOWNLOADS');
     _historyBox = Hive.box('SONG_HISTORY');
+    _localMusicBox = Hive.box('LOCAL_MUSIC');
 
     _listener = _emitCurrentState;
 
@@ -28,6 +30,7 @@ class LibraryCubit extends Cubit<LibraryState> {
     _favouritesBox.listenable().addListener(_listener);
     _downloadsBox.listenable().addListener(_listener);
     _historyBox.listenable().addListener(_listener);
+    _localMusicBox.listenable().addListener(_listener);
   }
 
   void loadLibrary() {
@@ -45,6 +48,7 @@ class LibraryCubit extends Cubit<LibraryState> {
           favouritesCount: _favouritesBox.length,
           downloadsCount: downloadedCount,
           historyCount: _historyBox.length,
+          localMusicCount: _localMusicBox.length,
         ),
       );
     } catch (e) {
@@ -58,6 +62,7 @@ class LibraryCubit extends Cubit<LibraryState> {
     _favouritesBox.listenable().removeListener(_listener);
     _downloadsBox.listenable().removeListener(_listener);
     _historyBox.listenable().removeListener(_listener);
+    _localMusicBox.listenable().removeListener(_listener);
     return super.close();
   }
 }

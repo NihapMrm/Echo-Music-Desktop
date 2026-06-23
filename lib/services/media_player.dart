@@ -336,13 +336,20 @@ class MediaPlayer extends ChangeNotifier {
     }
   }
 
+  Uri? _artUriFor(Map song) {
+    final thumbnails = song['thumbnails'] as List?;
+    if (thumbnails == null || thumbnails.isEmpty) return null;
+    final url = thumbnails.first['url']?.toString();
+    if (url == null || url.isEmpty) return null;
+    return Uri.tryParse(url.replaceAll('w60-h60', 'w225-h225'));
+  }
+
   Future<AudioSource> _getAudioSource(Map<String, dynamic> song) async {
     MediaItem tag = MediaItem(
       id: song['videoId'],
       title: song['title'] ?? 'Title',
       album: song['album']?['name'],
-      artUri: Uri.parse(
-          song['thumbnails']?.first['url'].replaceAll('w60-h60', 'w225-h225')),
+      artUri: _artUriFor(song),
       artist: song['artists']?.map((artist) => artist['name']).join(','),
       extras: song,
     );
@@ -384,8 +391,7 @@ class MediaPlayer extends ChangeNotifier {
       id: song['videoId'],
       title: song['title'] ?? 'Title',
       album: song['album']?['name'],
-      artUri: Uri.parse(
-          song['thumbnails']?.first['url'].replaceAll('w60-h60', 'w225-h225')),
+      artUri: _artUriFor(song),
       artist: song['artists']?.map((artist) => artist['name']).join(','),
       extras: song,
     );
