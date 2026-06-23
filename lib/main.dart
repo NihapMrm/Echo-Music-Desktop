@@ -71,23 +71,22 @@ void main() async {
   MediaPlayer mediaPlayer = MediaPlayer();
   GetIt.I.registerSingleton<MediaPlayer>(mediaPlayer);
 
-  // ponytail: hardware/OS media keys only (safe to intercept globally; never typed in text fields)
-  HardwareKeyboard.instance.addHandler((event) {
-    if (event is! KeyDownEvent) return false;
-    switch (event.logicalKey) {
-      case LogicalKeyboardKey.mediaPlayPause:
+  // Media keys on Windows arrive via global hotkeys registered natively
+  // (windows/runner/flutter_window.cpp) so they work even while minimized;
+  // Flutter never sees them as regular key events once registered there.
+  const MethodChannel('Echo/media_keys').setMethodCallHandler((call) async {
+    switch (call.method) {
+      case 'playPause':
         mediaPlayer.player.playing
             ? mediaPlayer.player.pause()
             : mediaPlayer.player.play();
-        return true;
-      case LogicalKeyboardKey.mediaTrackNext:
+        break;
+      case 'next':
         mediaPlayer.player.seekToNext();
-        return true;
-      case LogicalKeyboardKey.mediaTrackPrevious:
+        break;
+      case 'previous':
         mediaPlayer.player.seekToPrevious();
-        return true;
-      default:
-        return false;
+        break;
     }
   });
   LibraryService libraryService = LibraryService();
