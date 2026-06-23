@@ -70,6 +70,26 @@ void main() async {
 
   MediaPlayer mediaPlayer = MediaPlayer();
   GetIt.I.registerSingleton<MediaPlayer>(mediaPlayer);
+
+  // ponytail: hardware/OS media keys only (safe to intercept globally; never typed in text fields)
+  HardwareKeyboard.instance.addHandler((event) {
+    if (event is! KeyDownEvent) return false;
+    switch (event.logicalKey) {
+      case LogicalKeyboardKey.mediaPlayPause:
+        mediaPlayer.player.playing
+            ? mediaPlayer.player.pause()
+            : mediaPlayer.player.play();
+        return true;
+      case LogicalKeyboardKey.mediaTrackNext:
+        mediaPlayer.player.seekToNext();
+        return true;
+      case LogicalKeyboardKey.mediaTrackPrevious:
+        mediaPlayer.player.seekToPrevious();
+        return true;
+      default:
+        return false;
+    }
+  });
   LibraryService libraryService = LibraryService();
   GetIt.I.registerSingleton<DownloadManager>(DownloadManager());
   GetIt.I.registerSingleton(panelKey);
