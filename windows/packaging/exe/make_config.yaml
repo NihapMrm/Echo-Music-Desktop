@@ -1,0 +1,13 @@
+# Inno Setup config for `flutter_distributor`'s windows-exe target.
+#
+# app_id MUST stay the same across every release — it's how Inno Setup
+# recognizes "this is an upgrade of the same app" instead of installing a
+# second copy. Generated once with `[guid]::NewGuid()`; never regenerate it.
+app_id: "{{9DF0BF24-CF4F-4293-8E3F-D058EDE3F5AF}}"
+display_name: Echo Music
+publisher_name: NihapMrm
+publisher_url: https://github.com/NihapMrm/Echo-Music-Desktop
+create_desktop_icon: true
+setup_icon_file: windows/runner/resources/app_icon.ico
+locales:
+  - en
