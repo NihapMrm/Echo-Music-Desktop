@@ -12,6 +12,7 @@ import 'package:just_audio_media_kit/just_audio_media_kit.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 
+import 'core/widgets/floating_volume_control.dart';
 import 'generated/l10n.dart';
 import 'services/download_manager.dart';
 import 'services/file_storage.dart';
@@ -122,6 +123,22 @@ class Echo extends StatelessWidget {
       child: MaterialApp.router(
         title: 'Echo Music',
         routerConfig: router,
+        // Material's Slider needs an Overlay ancestor for its thumb/value
+        // indicator; the builder's `child` already has one internally (from
+        // the Router's Navigator), but our sibling FloatingVolumeControl
+        // does not, so we give the whole subtree its own.
+        builder: (context, child) => Overlay(
+          initialEntries: [
+            OverlayEntry(
+              builder: (context) => Stack(
+                children: [
+                  if (child != null) child,
+                  const FloatingVolumeControl(),
+                ],
+              ),
+            ),
+          ],
+        ),
         locale: Locale(context.watch<SettingsManager>().language['value']!),
         localizationsDelegates: const [
           S.delegate,
