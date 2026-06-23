@@ -90,6 +90,16 @@ void main() async {
         break;
     }
   });
+
+  // Keep the Windows taskbar thumbnail toolbar's play/pause glyph in sync.
+  if (Platform.isWindows) {
+    const taskbarChannel = MethodChannel('Echo/taskbar');
+    mediaPlayer.buttonState.addListener(() {
+      taskbarChannel.invokeMethod(
+          'setPlaying', mediaPlayer.buttonState.value == ButtonState.playing);
+    });
+  }
+
   LibraryService libraryService = LibraryService();
   GetIt.I.registerSingleton<DownloadManager>(DownloadManager());
   GetIt.I.registerSingleton(panelKey);

@@ -5,6 +5,7 @@
 #include <flutter/flutter_view_controller.h>
 #include <flutter/method_channel.h>
 #include <flutter/standard_method_codec.h>
+#include <shobjidl.h>
 
 #include <memory>
 
@@ -35,6 +36,20 @@ class FlutterWindow : public Win32Window {
   // hotkeys, so they work even while the window is minimized/unfocused).
   std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>>
       media_key_channel_;
+
+  // Channel Dart uses to tell us whether to show the play or pause glyph
+  // on the taskbar thumbnail toolbar's middle button.
+  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>>
+      taskbar_channel_;
+
+  // Taskbar thumbnail toolbar (the row of buttons shown when hovering the
+  // taskbar icon). Re-created whenever Explorer sends "TaskbarButtonCreated".
+  ITaskbarList3* taskbar_list_ = nullptr;
+  UINT taskbar_button_created_message_ = 0;
+  bool media_playing_ = false;
+
+  void InitializeThumbarButtons();
+  void SetThumbarPlaying(bool playing);
 };
 
 #endif  // RUNNER_FLUTTER_WINDOW_H_
